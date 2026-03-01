@@ -26,10 +26,10 @@ CACHE_FILE_KEY = "models/embeddings_cache.pkl"
 RELOAD_URL = "http://13.61.141.216:5000/reload_eng_mo"
 
 # Augmentation / quality thresholds
-AUGMENT_IF_LT = 10      # لو عدد صور الشخص أقل من هذا العدد --> نولّد augmentations
-NUM_AUG_PER_IMAGE = 8     # عدد الـ augmentations لكل صورة أصلية
-MIN_FACE_SIZE = 60        # أقل حجم مقبول لعرض الوجه
-MIN_CONFIDENCE = 0.9    # عتبة ثقة الكشف
+AUGMENT_IF_LT = 10      # If a person has fewer images than this, generate augmentations
+NUM_AUG_PER_IMAGE = 8     # Number of augmentations per original image
+MIN_FACE_SIZE = 60        # Minimum acceptable face width/height
+MIN_CONFIDENCE = 0.9    # Face detection confidence threshold
 
 # ----------------------
 # INIT
@@ -176,8 +176,7 @@ def load_cache():
 def save_cache(cache_data):
     print(f"Saving new cache ({len(cache_data)} items) to S3 ({CACHE_FILE_KEY})...")
 
-    # ### التعديل هنا ###
-    # استخدام المسار الأساسي لحفظ الملف المؤقت
+    # Update: use BASE_DIR to store the temporary file
     local_cache_path = os.path.join(BASE_DIR, "cache.pkl")
 
     try:
@@ -185,7 +184,7 @@ def save_cache(cache_data):
             pickle.dump(cache_data, f)
 
         s3_client.upload_file(local_cache_path, S3_BUCKET_NAME, CACHE_FILE_KEY)
-        os.remove(local_cache_path) # نمسح الملف المؤقت
+        os.remove(local_cache_path) # Remove the temporary file
         print("Cache saved successfully.")
     except Exception as e:
         print(f"Error saving cache: {e}")
@@ -302,8 +301,7 @@ def run_retraining():
     new_svm_model = SVC(kernel='rbf', probability=True, C=10, gamma='scale')
     new_svm_model.fit(np.array(current_embeddings), labels_encoded)
 
-    # ### التعديل هنا ###
-    # استخدام المسار الأساسي لحفظ الملف المؤقت
+    # Update: use BASE_DIR to store the temporary file
     local_model_path = os.path.join(BASE_DIR, "svm_model_new.joblib")
 
     joblib.dump((new_svm_model, encoder), local_model_path)

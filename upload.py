@@ -37,19 +37,19 @@ def run_camera_loop(camera_url, s3_client, bucket_name):
         while True:
             
             # ==========================================================
-            # ===   !! تعديل جديد: تنظيف المخزن المؤقت (Buffer Flush) !!   ===
-            # ===   نقوم بقراءة وتجاهل 5 إطارات قديمة لضمان   ===
-            # ===   أن الإطار التالي هو الأحدث.   ===
+            # ===   NEW UPDATE: flush camera buffer before reading    ===
+            # ===   Read and discard old frames so the next frame     ===
+            # ===   is the most recent one available.                 ===
             # ==========================================================
             for _ in range(40):
-                video_capture.grab() # .grab() أسرع من .read() لعملية التجاهل
+                video_capture.grab() # .grab() is faster than .read() when discarding frames
 
             # 1. Capture the latest frame
-            # الآن .read() سيعطينا أحدث إطار متاح
+            # .read() now returns the latest available frame
             ret, frame = video_capture.read()
             if not ret:
                 print("Error: Failed to read a frame from the camera. Attempting to reconnect...")
-                # (... باقي كود إعادة الاتصال كما هو ...)
+                # (... reconnection flow remains as-is ...)
                 video_capture.release()
                 video_capture = cv2.VideoCapture(camera_url)
                 if not video_capture.isOpened():
@@ -69,7 +69,7 @@ def run_camera_loop(camera_url, s3_client, bucket_name):
             image_bytes = buffer.tobytes()
 
             # 3. Create a unique filename
-            file_name = "engmo.jpg" # Using the fixed filename as requested
+            file_name = "engmo.jpg" # Use the fixed filename as requested
         
             # 4. Upload the image to S3
             try:
@@ -86,7 +86,7 @@ def run_camera_loop(camera_url, s3_client, bucket_name):
                 print(f"An error occurred during S3 upload: {e}")
 
             # 5. Wait for 5 seconds
-            # (ملاحظة: الكود يطبع 5 ثوانٍ لكنه ينتظر 1 فقط)
+            # Note: the message says 1 second and the sleep value matches that behavior
             print("--- Waiting for 1 second ---") 
             time.sleep(0.1)
 
@@ -101,9 +101,9 @@ def run_camera_loop(camera_url, s3_client, bucket_name):
 
 if name == "main":
     # ==========================================================
-    # ===   !! MUST EDIT !! Put your camera stream URL here   ===
+    # ===   MUST EDIT: set your camera stream URL here        ===
     # ==========================================================
-    CAMERA_STREAM_URL = "http://192.168.2.37:8080/video" # <--- Change this URL
+    CAMERA_STREAM_URL = "http://192.168.2.37:8080/video" # <--- Replace with your camera URL
     # ==========================================================
 
     # Start the continuous loop
