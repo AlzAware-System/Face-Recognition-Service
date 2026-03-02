@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Recognition Hub</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+  </head>
+  <body>
+    <header class="navbar">
+      <div class="logo">AI<span>Hub</span></div>
+      <nav class="nav-links">
+        <a href="#">Dashboard</a>
+      </nav>
+    </header>
+
+    <main class="container">
+      <nav class="tab-nav">
+        <a href="#face" class="tab-link active" data-tab="face-rec-tab">
+          <i class="fa-solid fa-user-check"></i> Live Face Feed
+        </a>
+        <a href="#medicine" class="tab-link" data-tab="med-rec-tab">
+          <i class="fa-solid fa-pills"></i> Live Medicine Feed
+        </a>
+      </nav>
+
+      <div class="tab-content">
+        
+        <div id="face-rec-tab" class="tab-pane active">
+          <div class="recognition-card" id="live-feed-card">
+            <h3>Live Recognition Feed (Faces)</h3>
+            <p>Monitoring S3 for <strong>face_live.jpg</strong>...</p>
+            
+            <div class="result-area">
+              <img id="face-preview" class="preview-image" src="" alt="Face Preview" />
+              <div id="face-result-text" class="result-text">
+                📡 Waiting for new image...
+              </div>
+            </div>
+            <div id="face-loader" class="loader-small" style="display: none;"></div>
+          </div>
+        </div>
+
+        <div id="med-rec-tab" class="tab-pane">
+          <div class="recognition-card">
+            <h3>Live Recognition Feed (Medicine)</h3>
+            <p>Monitoring S3 for <strong>medicine_live.jpg</strong>...</p>
+            
+            <div class="result-area">
+              <div class="image-container">
+                <img id="med-preview" class="preview-image" src="" alt="Medicine Preview" />
+                <canvas id="med-canvas" class="detection-canvas"></canvas>
+              </div>
+              <div id="med-result-text" class="result-text">
+                📡 Waiting for new image...
+              </div>
+            </div>
+            <div id="med-loader" class="loader-small" style="display: none;"></div>
+          </div>
+        </div>
+      </div>
+      
+    </main>
+
+    <footer class="footer">
+      <p>Made by <strong>Mohamed</strong></p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+  </body>
+</html>

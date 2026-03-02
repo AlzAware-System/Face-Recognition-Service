@@ -1,6 +1,9 @@
 from flask import Flask
 from warnings import simplefilter
-from routes import register_routes
+try:
+    from routes import register_routes
+except Exception:
+    from controllers import register_routes
 from services import load_model_from_s3, load_yolo_model, load_yolo_general_model # ### New addition
 
 # Hide TensorFlow/Scikit-learn warnings
