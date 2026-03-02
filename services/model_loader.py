@@ -5,7 +5,7 @@ from ultralytics import YOLO
 
 from . import model_state
 
-S3_BUCKET_NAME = "elasticbeanstalk-eu-north-1-395451633256"
+S3_BUCKET_NAME = "mobile-app2"
 MODEL_FILE_KEY = "models/svm_model.pkl"
 LOCAL_MODEL_PATH = "/tmp/svm_model.pkl"
 s3_client = boto3.client("s3", region_name="eu-north-1")
