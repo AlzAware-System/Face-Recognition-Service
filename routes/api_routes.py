@@ -7,6 +7,7 @@ from controllers import (
     reload_model,
     start_retrain_process,
 )
+from middleware.auth import jwt_required
 
 
 def register_api_routes(app):
@@ -17,6 +18,7 @@ def register_api_routes(app):
         return jsonify(body), status
 
     @app.route("/api/upload_frame", methods=["POST"])
+    @jwt_required
     def upload_frame_route():
         image_file = request.files.get("image")
         body, status = process_uploaded_frame(image_file)
