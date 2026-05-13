@@ -319,12 +319,12 @@ curl http://localhost:5000/health
 
 ---
 
-### 5. Reload Model — `POST /api/reload_model` 🔒
+### 5. Reload Model — `POST /reload_eng_mo` 🔒
 
 Hot-reload the face recognition (SVM) model from AWS S3 without restarting the server. **Requires JWT authentication.**
 
 ```bash
-curl -X POST http://localhost:5000/api/reload_model \
+curl -X POST http://localhost:5000/reload_eng_mo \
   -H "Authorization: Bearer <TOKEN_HERE>"
 ```
 
@@ -366,7 +366,7 @@ curl -X POST http://13.48.209.2:5001/trigger_model_training_s9a7g3f4d8j1k \
 | `POST` | `/api/set_active_mode` | 🔓 Public | Switch face/object mode |
 | `GET` | `/api/get_latest_results` | 🔓 Public | Get cached results |
 | `GET` | `/health` | 🔓 Public | Model health check |
-| `POST` | `/api/reload_model` | 🔒 JWT | Hot-reload SVM model |
+| `POST` | `/reload_eng_mo` | 🔒 JWT | Hot-reload SVM model |
 | `POST` | `/trigger_model...` | 🔒 JWT | Trigger retraining (port 5001) |
 
 ---
@@ -377,7 +377,7 @@ This service uses **mixed authentication** depending on the endpoint's purpose.
 
 ### 1. JWT Authentication (Model Management)
 
-The `/api/reload_model` and `/trigger_model_training_s9a7g3f4d8j1k` endpoints are protected with JWT authentication. Tokens are issued by the **Auth-ChatBot-Service** and verified here using a shared secret key (`SECRET_KEY`).
+The `/reload_eng_mo` and `/trigger_model_training_s9a7g3f4d8j1k` endpoints are protected with JWT authentication. Tokens are issued by the **Auth-ChatBot-Service** and verified here using a shared secret key (`SECRET_KEY`).
 
 ```bash
 # Example: Trigger Training
@@ -435,7 +435,7 @@ Models can be updated without restarting the server:
 
 ```bash
 # Reload the face recognition model from S3
-curl -X POST http://localhost:5000/api/reload_model \
+curl -X POST http://localhost:5000/reload_eng_mo \
   -H "Authorization: Bearer <TOKEN_HERE>"
 ```
 
@@ -526,7 +526,7 @@ Face-Recognition-Service/
 
 ## 🔒 Security Notes
 
-- The `/api/reload_model` and `/trigger_model_training...` endpoints require a valid JWT token (`Authorization: Bearer <TOKEN>`)
+- The `/reload_eng_mo` and `/trigger_model_training...` endpoints require a valid JWT token (`Authorization: Bearer <TOKEN>`)
 - The `/api/upload_frame` endpoint requires a valid `X-Auth-Key` header
 - JWT tokens are verified using the same `SECRET_KEY` as Auth-ChatBot-Service
 - The `THE_SECRET_API_KEY` should be moved to environment variables in production
