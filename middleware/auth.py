@@ -15,15 +15,16 @@ Usage:
 """
 
 import os
-import jwt  # PyJWT
+import jwt
 from functools import wraps
 from flask import request, jsonify
 from dotenv import load_dotenv
 
-# Load .env if present (so SECRET_KEY can live in a shared .env file)
 load_dotenv()
 
-
+# -----------------------------------------------------------------------------
+# JWT Authentication (Bearer Token)
+# -----------------------------------------------------------------------------
 def _get_secret() -> str:
     """Return the JWT signing secret shared with Auth-ChatBot-Service."""
     secret = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY")

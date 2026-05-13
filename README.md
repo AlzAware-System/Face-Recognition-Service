@@ -39,7 +39,7 @@ The service supports two operational modes:
 | 💊 **Medicine Detection** | Custom-trained YOLO model for identifying medicines |
 | 🔍 **General Object Detection** | YOLO general model for everyday object detection |
 | 🔄 **Hot-Reload** | Update AI models from AWS S3 without server restart |
-| 🔐 **API Key Authentication** | Protected upload, model reload, and training endpoints — uses static X-Auth-Key |
+| 🔐 **Authentication** | Mixed auth: JWT for model management, X-Auth-Key for frame uploads |
 | ⚡ **In-Memory Models** | Models loaded directly into RAM for fast inference |
 | 📸 **Real-Time Processing** | Frame-by-frame analysis from camera stream |
 
@@ -366,34 +366,34 @@ curl -X POST http://13.48.209.2:5001/trigger_model_training_s9a7g3f4d8j1k \
 | `POST` | `/api/set_active_mode` | 🔓 Public | Switch face/object mode |
 | `GET` | `/api/get_latest_results` | 🔓 Public | Get cached results |
 | `GET` | `/health` | 🔓 Public | Model health check |
-| `POST` | `/reload_eng_mo` | 🔒 API Key | Hot-reload SVM model |
-| `POST` | `/trigger_model...` | 🔒 API Key | Trigger retraining (port 5001) |
+| `POST` | `/reload_eng_mo` | 🔒 JWT | Hot-reload SVM model |
+| `POST` | `/trigger_model...` | 🔒 JWT | Trigger retraining (port 5001) |
 
 ---
 
-## 🔑 Authentication (API Key)
+## 🔑 Authentication
 
-The `/api/upload_frame`, `/reload_eng_mo` and `/trigger_model_training_s9a7g3f4d8j1k` endpoints are protected with API Key authentication. They require the `X-Auth-Key` header with the correct secret.
+This service uses **mixed authentication** depending on the endpoint's purpose.
 
-### How It Works
+### 1. JWT Authentication (Model Management)
 
-```
-1. Client sends request to reload or train model
-   → Includes "X-Auth-Key: <secret_key>" header
-
-2. Auth middleware (middleware/auth.py) verifies the key
-   → Compares against THE_SECRET_API_KEY
-   
-3. If valid → processes request
-   If invalid → returns 401 error
-```
-
-### Full Example
+The `/reload_eng_mo` and `/trigger_model_training_s9a7g3f4d8j1k` endpoints are protected with JWT authentication. Tokens are issued by the **Auth-ChatBot-Service** and verified here using a shared secret key (`SECRET_KEY`).
 
 ```bash
-# Reload the model using the secret key
-curl -X POST http://localhost:5000/reload_eng_mo \
-  -H "X-Auth-Key: My-Super-Secret-Key-For-Training-1a2b3c4d"
+# Example: Trigger Training
+curl -X POST http://13.48.209.2:5001/trigger_model_training_s9a7g3f4d8j1k \
+  -H "Authorization: Bearer <TOKEN_HERE>"
+```
+
+### 2. API Key Authentication (Image Uploads)
+
+The `/api/upload_frame` endpoint is protected with a static API Key. It requires the `X-Auth-Key` header. This is optimized for fast, continuous camera uploads where retrieving a JWT token might be inefficient.
+
+```bash
+# Example: Upload Frame
+curl -X POST http://localhost:5000/api/upload_frame \
+  -H "X-Auth-Key: My-Super-Secret-Key-For-Training-1a2b3c4d" \
+  -F "image=@photo.jpg"
 ```
 
 ---
@@ -526,8 +526,10 @@ Face-Recognition-Service/
 
 ## 🔒 Security Notes
 
-- The `/api/upload_frame`, `/reload_eng_mo`, and `/trigger_model_training...` endpoints require a valid `X-Auth-Key` header — unauthenticated requests receive a 401 error
-- The `THE_SECRET_API_KEY` should be moved to environment variables in production to avoid hardcoding secrets
+- The `/reload_eng_mo` and `/trigger_model_training...` endpoints require a valid JWT token (`Authorization: Bearer <TOKEN>`)
+- The `/api/upload_frame` endpoint requires a valid `X-Auth-Key` header
+- JWT tokens are verified using the same `SECRET_KEY` as Auth-ChatBot-Service
+- The `THE_SECRET_API_KEY` should be moved to environment variables in production
 - AWS credentials in `upload.py` should be moved to environment variables in production
 - In production, use Gunicorn behind Nginx with HTTPS
 
