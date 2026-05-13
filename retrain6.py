@@ -12,14 +12,13 @@ import requests
 from PIL import Image
 import pickle
 from io import BytesIO
+from dotenv import load_dotenv
 
-# --- 0. تحديد المسار الأساسي للسكربت ---
+load_dotenv()
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-LOCK_FILE = os.path.join(BASE_DIR, "training.lock") # ملف القفل في نفس المجلد
+LOCK_FILE = os.path.join(BASE_DIR, "training.lock")
 
-# ----------------------
-# CONFIG
-# ----------------------
 S3_BUCKET_NAME = "mobile-app2"
 TRAINING_DIR_PREFIX = 'training_data/'
 MODEL_FILE_KEY = "models/svm_model.pkl"
@@ -30,10 +29,8 @@ AUGMENT_IF_LT = 10
 NUM_AUG_PER_IMAGE = 8
 MIN_FACE_SIZE = 60
 MIN_CONFIDENCE = 0.9
+THE_SECRET_API_KEY = os.getenv("API_KEY", "My-Super-Secret-Key-For-Training-1a2b3c4d")
 
-# ----------------------
-# INIT
-# ----------------------
 print("Initializing FaceNet & MTCNN...")
 facenet = FaceNet().model
 detector = MTCNN()
@@ -41,10 +38,6 @@ detector = MTCNN()
 print("Initializing S3 client...")
 s3_client = boto3.client('s3')
 
-
-# ----------------------
-# LOCKING UTILITIES
-# ----------------------
 def create_lock():
     with open(LOCK_FILE, 'w') as f:
         f.write("Training in progress...")
@@ -53,9 +46,6 @@ def remove_lock():
     if os.path.exists(LOCK_FILE):
         os.remove(LOCK_FILE)
 
-# ----------------------
-# IMAGE UTILITIES
-# ----------------------
 def augment_face(face, num_aug=NUM_AUG_PER_IMAGE):
     augmented_faces = [face.copy()]
     h, w = face.shape[:2]
@@ -122,9 +112,6 @@ def face_to_embedding(face_rgb):
     emb = facenet.predict(arr)[0]
     return emb
 
-# ----------------------
-# CACHING UTILITIES
-# ----------------------
 def load_cache():
     print(f"Loading embeddings cache from S3 ({CACHE_FILE_KEY})...")
     try:
@@ -151,17 +138,11 @@ def save_cache(cache_data):
     except Exception as e:
         print(f"Error saving cache: {e}")
 
-# ----------------------
-# MAIN RETRAINING PIPELINE
-# ----------------------
 def run_retraining_logic():
     print("--- Starting Retraining Logic (PERSISTENT MEMORY MODE) ---")
     cached_data = load_cache()
-
-    # Start with all old data (persistent memory)
     new_cache_data = cached_data.copy()
 
-    # List current S3 objects
     paginator = s3_client.get_paginator('list_objects_v2')
     pages = paginator.paginate(Bucket=S3_BUCKET_NAME, Prefix=TRAINING_DIR_PREFIX)
     s3_objects = []
@@ -169,7 +150,6 @@ def run_retraining_logic():
         for obj in page.get('Contents', []):
             s3_objects.append(obj)
 
-    # Calculate label counts for augmentation decision
     label_counts = {}
     for obj in s3_objects:
         key = obj['Key']
@@ -183,7 +163,6 @@ def run_retraining_logic():
     processed_count = 0
     cache_hit_count = 0
 
-    # Process only new/changed files
     for obj in s3_objects:
         s3_key = obj['Key']
         s3_size = obj.get('Size', 0)
@@ -191,7 +170,6 @@ def run_retraining_logic():
         if s3_key.endswith('/') or s3_size == 0: continue
 
         try:
-            # Check cache (exact match on key AND etag)
             if s3_key in new_cache_data and new_cache_data[s3_key].get('etag') == s3_etag:
                 cache_hit_count += 1
                 continue
@@ -211,7 +189,6 @@ def run_retraining_logic():
                 print(f"Warning: no usable face found in {s3_key}. Skipping.")
                 continue
 
-            # Augmentation logic
             if label_counts.get(label, 0) < AUGMENT_IF_LT:
                 aug_faces = augment_face(face, num_aug=NUM_AUG_PER_IMAGE)
                 for i, f in enumerate(aug_faces):
@@ -226,7 +203,6 @@ def run_retraining_logic():
         except Exception as e:
             print(f"Error processing {s3_key}: {e}")
 
-    # Gather all data for training
     final_embeddings = []
     final_labels = []
     print("Gathering all data (persistent history) for training...")
@@ -242,7 +218,6 @@ def run_retraining_logic():
     print(f"Total historical samples: {len(final_labels)}")
     print(f"Unique people (historical): {len(set(final_labels))}")
 
-    # Train
     print("Training new SVM model (RBF kernel)...")
     encoder = LabelEncoder()
     labels_encoded = encoder.fit_transform(final_labels)
@@ -253,7 +228,6 @@ def run_retraining_logic():
     joblib.dump((new_svm_model, encoder), local_model_path)
     print(f"New model saved locally -> {local_model_path}")
 
-    # Upload
     try:
         print(f"Uploading new model to S3 ({MODEL_FILE_KEY})...")
         s3_client.upload_file(local_model_path, S3_BUCKET_NAME, MODEL_FILE_KEY)
@@ -264,16 +238,15 @@ def run_retraining_logic():
         print(f"❌ Error uploading: {e}")
         return
 
-    # Reload request
     try:
-        requests.post(RELOAD_URL, timeout=10)
-        print("✅ Server reload requested.")
-    except Exception:
-        pass
+        headers = {"X-Auth-Key": THE_SECRET_API_KEY}
+        requests.post(RELOAD_URL, headers=headers, timeout=10)
+        print("✅ Server reload requested with X-Auth-Key.")
+    except Exception as e:
+        print(f"⚠️ Failed to send reload request: {e}")
 
 def main():
     print("--- Retraining Script Started ---")
-    # Check for lock file
     if os.path.exists(LOCK_FILE):
         print("⚠️ Lock file exists. Training is already in progress. Exiting.")
         return

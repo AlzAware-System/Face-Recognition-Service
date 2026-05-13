@@ -7,7 +7,7 @@ from controllers import (
     reload_model,
     start_retrain_process,
 )
-from middleware.auth import jwt_required, api_key_required
+from middleware.auth import api_key_required
 
 
 def register_api_routes(app):
@@ -35,7 +35,7 @@ def register_api_routes(app):
         return jsonify(body), status
 
     @app.route("/reload_eng_mo", methods=["POST"])
-    @jwt_required
+    @api_key_required
     def reload_model_route():
         body, status = reload_model()
         return jsonify(body), status
