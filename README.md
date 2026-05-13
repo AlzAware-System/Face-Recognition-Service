@@ -39,7 +39,7 @@ The service supports two operational modes:
 | 💊 **Medicine Detection** | Custom-trained YOLO model for identifying medicines |
 | 🔍 **General Object Detection** | YOLO general model for everyday object detection |
 | 🔄 **Hot-Reload** | Update AI models from AWS S3 without server restart |
-| 🔐 **JWT Authentication** | Protected upload endpoint — validates tokens from Auth-ChatBot-Service |
+| 🔐 **JWT Authentication** | Protected model reload and training endpoints — validates tokens from Auth-ChatBot-Service |
 | ⚡ **In-Memory Models** | Models loaded directly into RAM for fast inference |
 | 📸 **Real-Time Processing** | Frame-by-frame analysis from camera stream |
 
@@ -148,15 +148,15 @@ If a model fails to load, you'll see a warning but the server will still start:
 
 ## 📡 API Endpoints
 
-### 1. Upload Frame — `POST /api/upload_frame` 🔒
+### 1. Upload Frame — `POST /api/upload_frame` 🔓
 
-Upload an image frame for AI analysis. **Requires JWT authentication.**
+Upload an image frame for AI analysis.
 
 | Detail | Value |
 |:---|:---|
 | **Method** | `POST` |
 | **URL** | `/api/upload_frame` |
-| **Auth** | 🔒 `Authorization: Bearer <JWT>` |
+| **Auth** | 🔓 Public |
 | **Content-Type** | `multipart/form-data` |
 | **Body** | `image` — image file (JPG, PNG) |
 
@@ -164,7 +164,6 @@ Upload an image frame for AI analysis. **Requires JWT authentication.**
 
 ```bash
 curl -X POST http://localhost:5000/api/upload_frame \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..." \
   -F "image=@photo.jpg"
 ```
 
@@ -319,12 +318,13 @@ curl http://localhost:5000/health
 
 ---
 
-### 5. Reload Model — `POST /reload_eng_mo` 🔓
+### 5. Reload Model — `POST /reload_eng_mo` 🔒
 
-Hot-reload the face recognition (SVM) model from AWS S3 without restarting the server.
+Hot-reload the face recognition (SVM) model from AWS S3 without restarting the server. **Requires JWT authentication.**
 
 ```bash
-curl -X POST http://localhost:5000/reload_eng_mo
+curl -X POST http://localhost:5000/reload_eng_mo \
+  -H "Authorization: Bearer <JWT>"
 ```
 
 #### Response (200)
@@ -338,12 +338,13 @@ curl -X POST http://localhost:5000/reload_eng_mo
 
 ---
 
-### 6. Start Retraining — `POST /api/start-retrain` 🔓
+### 6. Start Retraining — `POST /trigger_model_training_s9a7g3f4d8j1k` 🔒 (Trainer Server - port 5001)
 
-Trigger model retraining on the training server.
+Trigger model retraining on the training server. **Requires JWT authentication.**
 
 ```bash
-curl -X POST http://localhost:5000/api/start-retrain
+curl -X POST http://13.48.209.2:5001/trigger_model_training_s9a7g3f4d8j1k \
+  -H "Authorization: Bearer <JWT>"
 ```
 
 #### Response (202)
@@ -360,18 +361,18 @@ curl -X POST http://localhost:5000/api/start-retrain
 
 | Method | Endpoint | Auth | Description |
 |:---|:---|:---|:---|
-| `POST` | `/api/upload_frame` | 🔒 JWT | Upload image for recognition |
+| `POST` | `/api/upload_frame` | 🔓 Public | Upload image for recognition |
 | `POST` | `/api/set_active_mode` | 🔓 Public | Switch face/object mode |
 | `GET` | `/api/get_latest_results` | 🔓 Public | Get cached results |
 | `GET` | `/health` | 🔓 Public | Model health check |
-| `POST` | `/reload_eng_mo` | 🔓 Public | Hot-reload SVM model |
-| `POST` | `/api/start-retrain` | 🔓 Public | Trigger retraining |
+| `POST` | `/reload_eng_mo` | 🔒 JWT | Hot-reload SVM model |
+| `POST` | `/trigger_model...` | 🔒 JWT | Trigger retraining (port 5001) |
 
 ---
 
 ## 🔑 Authentication (JWT)
 
-The `/api/upload_frame` endpoint is protected with JWT authentication. Tokens are issued by the **Auth-ChatBot-Service** and verified here using a shared secret key.
+The `/reload_eng_mo` and `/trigger_model_training_s9a7g3f4d8j1k` endpoints are protected with JWT authentication. Tokens are issued by the **Auth-ChatBot-Service** and verified here using a shared secret key.
 
 ### How It Works
 
@@ -379,7 +380,7 @@ The `/api/upload_frame` endpoint is protected with JWT authentication. Tokens ar
 1. User logs in via Auth-ChatBot-Service (POST /auth/login)
    → Receives JWT token signed with SECRET_KEY (HS256)
 
-2. User sends image to Face-Recognition-Service
+2. User sends request to reload or train model
    → Includes "Authorization: Bearer <token>" header
 
 3. JWT middleware (middleware/auth.py) verifies the token
@@ -411,10 +412,9 @@ TOKEN=$(curl -s -X POST http://localhost:5005/auth/login \
   -d '{"email": "ahmed@example.com", "password": "secret"}' \
   | python -c "import sys,json; print(json.load(sys.stdin)['token'])")
 
-# Step 2: Upload frame with the token
-curl -X POST http://localhost:5000/api/upload_frame \
-  -H "Authorization: Bearer $TOKEN" \
-  -F "image=@photo.jpg"
+# Step 2: Reload the model with the token
+curl -X POST http://localhost:5000/reload_eng_mo \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ---
@@ -456,7 +456,8 @@ Models can be updated without restarting the server:
 
 ```bash
 # Reload the face recognition model from S3
-curl -X POST http://localhost:5000/reload_eng_mo
+curl -X POST http://localhost:5000/reload_eng_mo \
+  -H "Authorization: Bearer <JWT>"
 ```
 
 ---
@@ -546,7 +547,7 @@ Face-Recognition-Service/
 
 ## 🔒 Security Notes
 
-- The `/api/upload_frame` endpoint requires a valid JWT token — unauthenticated requests receive a 401 error
+- The `/reload_eng_mo` and `/trigger_model_training...` endpoints require a valid JWT token — unauthenticated requests receive a 401 error
 - JWT tokens are verified using the same `SECRET_KEY` as Auth-ChatBot-Service (HS256)
 - AWS credentials in `upload.py` should be moved to environment variables in production
 - In production, use Gunicorn behind Nginx with HTTPS

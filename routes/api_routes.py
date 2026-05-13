@@ -18,7 +18,6 @@ def register_api_routes(app):
         return jsonify(body), status
 
     @app.route("/api/upload_frame", methods=["POST"])
-    @jwt_required
     def upload_frame_route():
         image_file = request.files.get("image")
         body, status = process_uploaded_frame(image_file)
@@ -35,6 +34,7 @@ def register_api_routes(app):
         return jsonify(body), status
 
     @app.route("/reload_eng_mo", methods=["POST"])
+    @jwt_required
     def reload_model_route():
         body, status = reload_model()
         return jsonify(body), status
