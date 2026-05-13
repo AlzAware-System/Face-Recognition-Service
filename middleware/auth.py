@@ -1,19 +1,3 @@
-"""
-JWT Authentication Middleware for Face-Recognition-Service.
-
-This module verifies JWT tokens issued by the Auth-ChatBot-Service.
-Both services MUST share the same SECRET_KEY (or JWT_SECRET) so that
-tokens minted by one can be validated by the other.
-
-Usage:
-    from middleware.auth import jwt_required
-
-    @app.route("/api/upload_frame", methods=["POST"])
-    @jwt_required
-    def upload_frame_route():
-        ...
-"""
-
 import os
 import jwt
 from functools import wraps
@@ -22,11 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# -----------------------------------------------------------------------------
-# JWT Authentication (Bearer Token)
-# -----------------------------------------------------------------------------
 def _get_secret() -> str:
-    """Return the JWT signing secret shared with Auth-ChatBot-Service."""
     secret = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY")
     if not secret:
         raise RuntimeError(
@@ -35,23 +15,13 @@ def _get_secret() -> str:
         )
     return secret
 
-
 def _extract_bearer_token() -> str | None:
-    """Pull the raw token from the Authorization header."""
     auth_header = request.headers.get("Authorization", "")
     if auth_header.startswith("Bearer "):
         return auth_header.split(" ", 1)[1]
     return None
 
-
 def jwt_required(fn):
-    """Decorator that protects a Flask route with JWT authentication.
-
-    On success the decoded payload is stored on:
-        request.current_user_payload   – dict with sub, role, iat, exp, …
-
-    On failure a JSON 401 response is returned immediately.
-    """
     @wraps(fn)
     def wrapper(*args, **kwargs):
         token = _extract_bearer_token()
@@ -59,8 +29,7 @@ def jwt_required(fn):
             return jsonify({
                 "status": "error",
                 "code": "AUTH_ERROR",
-                "message": "Missing Authorization header. "
-                           "Please provide a Bearer token.",
+                "message": "Missing Authorization header. Please provide a Bearer token.",
             }), 401
 
         try:
@@ -91,24 +60,14 @@ def jwt_required(fn):
                 "message": f"Token validation failed: {exc}",
             }), 401
 
-        # Make the decoded claims available to the route handler
         request.current_user_payload = payload
         return fn(*args, **kwargs)
 
     return wrapper
 
-
-# -----------------------------------------------------------------------------
-# API Key Authentication (X-Auth-Key)
-# -----------------------------------------------------------------------------
 THE_SECRET_API_KEY = os.getenv("API_KEY", "My-Super-Secret-Key-For-Training-1a2b3c4d")
 
-
 def api_key_required(fn):
-    """Decorator that protects a Flask route with X-Auth-Key authentication.
-
-    On failure a JSON 401 response is returned immediately.
-    """
     @wraps(fn)
     def wrapper(*args, **kwargs):
         received_key = request.headers.get("X-Auth-Key")
