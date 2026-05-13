@@ -34,7 +34,7 @@ def register_api_routes(app):
         body, status = health_check()
         return jsonify(body), status
 
-    @app.route("/reload_eng_mo", methods=["POST"])
+    @app.route("/api/reload_model", methods=["POST"])
     @jwt_required
     def reload_model_route():
         body, status = reload_model()
