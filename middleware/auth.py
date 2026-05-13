@@ -95,3 +95,29 @@ def jwt_required(fn):
         return fn(*args, **kwargs)
 
     return wrapper
+
+
+# -----------------------------------------------------------------------------
+# API Key Authentication (X-Auth-Key)
+# -----------------------------------------------------------------------------
+THE_SECRET_API_KEY = os.getenv("API_KEY", "My-Super-Secret-Key-For-Training-1a2b3c4d")
+
+
+def api_key_required(fn):
+    """Decorator that protects a Flask route with X-Auth-Key authentication.
+
+    On failure a JSON 401 response is returned immediately.
+    """
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        received_key = request.headers.get("X-Auth-Key")
+        if not received_key or received_key != THE_SECRET_API_KEY:
+            return jsonify({
+                "status": "error",
+                "code": "AUTH_ERROR",
+                "message": "Invalid or missing X-Auth-Key header.",
+            }), 401
+
+        return fn(*args, **kwargs)
+
+    return wrapper
