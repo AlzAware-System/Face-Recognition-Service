@@ -9,7 +9,6 @@ from controllers import (
 )
 from middleware.auth import api_key_required
 
-
 def register_api_routes(app):
     @app.route("/api/set_active_mode", methods=["POST"])
     def set_active_mode_route():
