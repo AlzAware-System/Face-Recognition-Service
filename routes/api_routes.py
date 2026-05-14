@@ -1,16 +1,15 @@
 from flask import request, jsonify
+from controllers import (
+    set_active_mode,
+    process_uploaded_frame,
+    get_latest_results,
+    health_check,
+    reload_model,
+    start_retrain_process,
+)
 from middleware.auth import api_key_required
 
 def register_api_routes(app):
-    from controllers import (
-        set_active_mode,
-        process_uploaded_frame,
-        get_latest_results,
-        health_check,
-        reload_model,
-        start_retrain_process,
-    )
-
     @app.route("/api/set_active_mode", methods=["POST"])
     def set_active_mode_route():
         payload = request.get_json(silent=True) or {}
