@@ -1,14 +1,8 @@
 import io
 import numpy as np
 from PIL import Image
-
 from . import model_state
-from .model_loader import (
-    is_svm_model_loaded,
-    is_yolo_model_loaded,
-    is_yolo_general_model_loaded,
-)
-
+from .model_loader import is_svm_model_loaded, is_yolo_model_loaded
 
 def predict_face(image_bytes):
     if not is_svm_model_loaded():
@@ -34,10 +28,9 @@ def predict_face(image_bytes):
     except Exception as exc:
         return False, f"Prediction failed: {exc}"
 
-
 def predict_medicine(image_bytes):
-    if not is_yolo_model_loaded() or not is_yolo_general_model_loaded():
-        return False, "One of the YOLO models is not loaded"
+    if not is_yolo_model_loaded():
+        return False, "YOLO Medicine model is not loaded"
 
     try:
         img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
@@ -53,21 +46,10 @@ def predict_medicine(image_bytes):
                 }
             )
 
-        results_general = model_state.yolo_general_model(img, verbose=False)
-        for box in results_general[0].boxes:
-            class_name = model_state.yolo_general_model.names[int(box.cls)]
-            if class_name.lower() != "person":
-                all_detections.append(
-                    {
-                        "name": class_name,
-                        "confidence": float(box.conf),
-                        "type": "object",
-                    }
-                )
-
         if not all_detections:
-            return False, "No objects or medicine detected"
+            return False, "No medicine detected"
 
+        # جلب أفضل دقة للأدوية
         best_detection = max(all_detections, key=lambda detection: detection["confidence"])
         return True, {"detection": best_detection}
     except Exception as exc:
