@@ -524,14 +524,69 @@ Face-Recognition-Service/
 
 ---
 
-## 🔒 Security Notes
+## 🔒 Security
 
-- The `/reload_eng_mo` and `/trigger_model_training...` endpoints require a valid JWT token (`Authorization: Bearer <TOKEN>`)
-- The `/api/upload_frame` endpoint requires a valid `X-Auth-Key` header
-- JWT tokens are verified using the same `SECRET_KEY` as Auth-ChatBot-Service
-- The `THE_SECRET_API_KEY` should be moved to environment variables in production
-- AWS credentials in `upload.py` should be moved to environment variables in production
-- In production, use Gunicorn behind Nginx with HTTPS
+### Authentication Model
+
+This service uses **mixed authentication** depending on the endpoint's sensitivity:
+
+| Endpoint | Auth Method | Purpose |
+|:---|:---|:---|
+| `POST /api/upload_frame` | 🔑 `X-Auth-Key` header | Fast, continuous camera uploads without JWT overhead |
+| `POST /reload_eng_mo` | 🔒 JWT Bearer token | Model management requires authenticated identity |
+| `POST /trigger_model_training...` | 🔑 `X-Auth-Key` header | Secure server-to-server retraining trigger |
+
+### Cross-Service JWT Verification
+
+This service **verifies** JWT tokens issued by `Auth-ChatBot-Service` using a shared `JWT_SECRET`. It does **not** issue tokens — only validates them.
+
+```
+Auth-ChatBot-Service (issues JWT) ──► Face-Recognition-Service (verifies JWT)
+         │                                       │
+         └──── Same JWT_SECRET in .env ──────────┘
+```
+
+---
+
+### 🛡️ Security Audit & Patches Applied
+
+As part of a comprehensive security audit across the AlzAware platform, the following vulnerabilities were identified and remediated in this service:
+
+| # | Vulnerability | Severity | OWASP Category | Status |
+|:--|:---|:---|:---|:---|
+| 1 | Weak JWT Secret Key (Token Forgery) | 🔴 Critical | A02 — Cryptographic Failures | ✅ Fixed |
+| 2 | Missing Key Rotation Support | 🟠 Medium | A02 — Cryptographic Failures | ✅ Fixed |
+
+#### 1. Weak JWT Secret Key & Safe Rotation
+
+**Root Cause:** The shared `JWT_SECRET` was a weak, guessable string (`JwtSecretForAuth`). Since this service verifies tokens using the same secret as `Auth-ChatBot-Service`, a compromised secret would allow an attacker to forge valid tokens and bypass authentication on the `/reload_eng_mo` endpoint, enabling unauthorized model replacement.
+
+**Fix:** Updated `JWT_SECRET` in all `.env` files (root, `Face-Recognition-Server`, `Retrain-Server`) to a cryptographically secure 64-character hex string, matching the rotated key in `Auth-ChatBot-Service`.
+
+**Affected Files:**
+- `.env` — Root service configuration
+- `Face-Recognition-Server/.env` — Inference server configuration
+- `Retrain-Server/.env` — Training server configuration
+
+#### 2. Graceful Key Rotation (Fallback Mechanism)
+
+**Root Cause:** Replacing the JWT secret would instantly invalidate all active mobile sessions, since tokens signed with the old key would fail verification. This would force all users to re-authenticate simultaneously.
+
+**Fix:** Implemented a `JWT_SECRET_OLD` fallback in the JWT middleware for both sub-services. When a token fails verification with the new key, the middleware attempts verification with the old key before rejecting. This allows existing sessions to remain valid during the transition period while all new tokens are signed with the strong key.
+
+**Affected Files:**
+- `Face-Recognition-Server/middleware/auth.py` — JWT fallback logic
+- `Retrain-Server/middleware/auth.py` — JWT fallback logic
+
+---
+
+> ⚠️ **Production Recommendations**:
+> - ✅ Use a cryptographically secure `JWT_SECRET` (64+ hex characters)
+> - ✅ `JWT_SECRET` must match across all services
+> - ☐ Move `API_KEY` to a strong, randomly generated value
+> - ☐ Enable HTTPS via reverse proxy (Nginx)
+> - ☐ Deploy with Gunicorn as WSGI server
+> - ☐ Rotate `JWT_SECRET_OLD` out after all old tokens expire
 
 ---
 
