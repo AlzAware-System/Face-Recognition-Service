@@ -42,11 +42,22 @@ def jwt_required(fn):
                 "message": "Token has expired. Please log in again.",
             }), 401
         except jwt.InvalidSignatureError:
-            return jsonify({
-                "status": "error",
-                "code": "AUTH_ERROR",
-                "message": "Invalid token signature.",
-            }), 401
+            fallback = os.getenv("JWT_SECRET_OLD")
+            if fallback:
+                try:
+                    payload = jwt.decode(token, fallback, algorithms=["HS256"])
+                except Exception:
+                    return jsonify({
+                        "status": "error",
+                        "code": "AUTH_ERROR",
+                        "message": "Invalid token signature.",
+                    }), 401
+            else:
+                return jsonify({
+                    "status": "error",
+                    "code": "AUTH_ERROR",
+                    "message": "Invalid token signature.",
+                }), 401
         except jwt.DecodeError:
             return jsonify({
                 "status": "error",
