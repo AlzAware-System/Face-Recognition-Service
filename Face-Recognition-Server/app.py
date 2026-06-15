@@ -5,10 +5,13 @@ try:
 except Exception:
     from controllers import register_routes
 from services import load_model_from_s3, load_yolo_model
+# 🎯 الإضافة الجديدة لاستدعاء الـ Worker
+from services import start_analysis_worker
 
 # Hide TensorFlow/Scikit-learn warnings
 simplefilter(action='ignore', category=FutureWarning)
 
+# تعريف تطبيق فلاسك (السطر اللي كان ممسوح وعمل المشكلة)
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 register_routes(app)
@@ -28,6 +31,9 @@ else:
     print("✅ Medicine Detection (YOLO Expert) model loaded successfully.")
 
 print("--- Server initialized ---")
+
+# 🎯 تشغيل عامل الخلفية (Background Worker) لمعالجة الصور بدون اختناق
+start_analysis_worker()
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)
