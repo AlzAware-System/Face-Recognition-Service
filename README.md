@@ -586,7 +586,7 @@ As part of a comprehensive security audit across the AlzAware platform, the foll
 > - ☐ Move `API_KEY` to a strong, randomly generated value
 > - ☐ Enable HTTPS via reverse proxy (Nginx)
 > - ☐ Deploy with Gunicorn as WSGI server
-> - ☐ Rotate `JWT_SECRET_OLD` out after all old tokens expire
+> - ✅ Rotate `JWT_SECRET_OLD` out after all old tokens expire
 
 ---
 
