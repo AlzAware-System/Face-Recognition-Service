@@ -14,6 +14,9 @@ import pickle
 from io import BytesIO
 from dotenv import load_dotenv
 
+from middleware.tracing import setup_script_tracing
+logger = setup_script_tracing("Retrain-Script")
+
 load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -246,21 +249,21 @@ def run_retraining_logic():
         print(f"⚠️ Failed to send reload request: {e}")
 
 def main():
-    print("--- Retraining Script Started ---")
+    logger.info("--- Retraining Script Started ---")
     if os.path.exists(LOCK_FILE):
-        print("⚠️ Lock file exists. Training is already in progress. Exiting.")
+        logger.warning("⚠️ Lock file exists. Training is already in progress. Exiting.")
         return
 
     try:
-        print("🔒 Creating lock file...")
+        logger.info("🔒 Creating lock file...")
         create_lock()
         run_retraining_logic()
     except Exception as e:
-        print(f"❌ FATAL ERROR during retraining: {e}")
+        logger.error(f"❌ FATAL ERROR during retraining: {e}")
     finally:
-        print("🔓 Removing lock file...")
+        logger.info("🔓 Removing lock file...")
         remove_lock()
-    print("--- Retraining Script Finished ---")
+    logger.info("--- Retraining Script Finished ---")
 
 if __name__ == "__main__":
     main()

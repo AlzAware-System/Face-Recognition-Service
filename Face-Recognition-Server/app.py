@@ -14,9 +14,13 @@ simplefilter(action='ignore', category=FutureWarning)
 # تعريف تطبيق فلاسك (السطر اللي كان ممسوح وعمل المشكلة)
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
+# 🎯 Initialize Tracing Middleware
+from middleware.tracing import setup_tracing
+setup_tracing(app, "Face-Recognition-Service")
+
 register_routes(app)
 
-print("Starting server initialization...")
+app.logger.info("Starting server initialization...")
 
 # 1. Load face model (SVM)
 if not load_model_from_s3():
