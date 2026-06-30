@@ -7,7 +7,7 @@ from .model_loader import (
     is_yolo_general_model_loaded,
 )
 from .prediction_service import predict_face, predict_medicine
-from .state_store import RAW_FRAME_BUFFER, LATEST_RESULTS_CACHE, buffer_lock
+from .state_store import RAW_FRAME_BUFFER, CURRENT_FRAME_RESULT, buffer_lock, frame_processed_event
 from .worker_service import analysis_worker, start_analysis_worker
 
 __all__ = [
@@ -20,8 +20,9 @@ __all__ = [
     "predict_face",
     "predict_medicine",
     "RAW_FRAME_BUFFER",
-    "LATEST_RESULTS_CACHE",
+    "CURRENT_FRAME_RESULT",
     "buffer_lock",
+    "frame_processed_event",
     "analysis_worker",
     "start_analysis_worker",
 ]
